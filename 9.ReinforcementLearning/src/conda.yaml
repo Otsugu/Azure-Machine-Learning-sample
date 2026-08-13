@@ -1,0 +1,50 @@
+# Azure Machine Learning のジョブ実行環境定義
+#
+# 【重要】このファイルは Azure ML の「カスタム環境（Environment）」を作るための conda 定義です。
+#   ベース Docker イメージの上に、conda がこの定義どおりの Python 環境を新規作成します。
+#   ベースイメージに入っている Python パッケージは、この conda 環境からは見えません。
+#   出典: https://learn.microsoft.com/azure/machine-learning/how-to-manage-environments-v2?view=azureml-api-2
+#
+# 【最重要のバージョン制約】
+#   panda-gym の setup.py は install_requires に "numpy<2" を指定しています。
+#   → numpy 2.x を入れると panda-gym が壊れます。必ず numpy<2 に固定してください。
+#   出典（参考情報・OSS 公式ソース）:
+#     https://github.com/qgallouedec/panda-gym/blob/master/setup.py
+#
+# 【バージョン固定の方針】
+#   本ハンズオンは「再現可能な実験」を主題にしているため、主要パッケージを固定します。
+#   ただし PyTorch は固定しません（stable-baselines3 が要求する版に解決させます）。
+#   実際に解決されたバージョンは、学習スクリプトが pip freeze して MLflow に記録します。
+
+name: rl-panda-gym
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      # --- 強化学習 (すべて MIT / zlib ライセンス。詳細は NOTICE.md) ---
+      - "numpy<2"                      # panda-gym の必須制約
+      - gymnasium==0.29.1              # RL 環境の API 規約 (MIT)
+      - panda-gym==3.0.7               # Panda ロボットのタスク環境 (MIT)。pybullet を依存として引き込む (zlib)
+      - stable-baselines3==2.4.1       # RL アルゴリズム実装 (MIT)
+      # ※ scipy は panda-gym の依存として pip が自動解決するため、ここでは固定しない。
+      #   上の "numpy<2" 制約のもとで互換なバージョンが選ばれる。
+
+      # --- 実験追跡 (Azure ML への記録に必須) ---
+      - mlflow
+      - azureml-mlflow
+
+      # --- 評価動画の書き出し ---
+      - imageio
+      - imageio-ffmpeg                 # ffmpeg バイナリを同梱する
+
+      # --- 集計・可視化 ---
+      - pandas
+      - matplotlib
+
+      # --- 対話型ジョブ (JupyterLab / VS Code / SSH) に必要 ---
+      #   出典: https://learn.microsoft.com/azure/machine-learning/how-to-interactive-jobs?view=azureml-api-2
+      #   「ジョブ環境に openssh-server と ipykernel ~=6.0 が入っている必要があります」
+      - "ipykernel~=6.0"
+      - debugpy                        # VS Code のリモートデバッガーをアタッチする場合に必要

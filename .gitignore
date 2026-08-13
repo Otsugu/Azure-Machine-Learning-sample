@@ -127,3 +127,42 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# .NET / C# build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+artifacts/
+TestResults/
+BenchmarkDotNet.Artifacts/
+
+# Visual Studio user settings and debugging cache
+.vs/
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+
+# .NET SDK and NuGet generated files
+project.assets.json
+project.nuget.cache
+project.packagespec.json
+*.nuget.g.props
+*.nuget.g.targets
+*.nupkg
+*.snupkg
+*.binlog
+*.pdb
+
+# .NET development tool user-specific files
+_ReSharper*/
+*.DotSettings.user
+.idea/

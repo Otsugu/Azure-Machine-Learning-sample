@@ -79,6 +79,26 @@ https://docs.microsoft.com/ja-jp/azure/machine-learning/service/samples-notebook
 
     Azure Machine Learning の  Hyperparameters Turning を使ったサンプル。PyTorch Lightning での Image Classification。Fine Tuning/Transfer Learning 前提で。
 
+# 8. MLFlow with Azure Machine Learning
+
+ - [train-and-deploy-keras-auto-logging.ipynb](8.%20MLFlow/README.md)
+
+    `MLflow` は、実験のパラメーター・メトリック・成果物を記録するための OSS です。Azure Machine Learning のワークスペースは MLflow 互換なので、**既存の学習スクリプトをなるべく変更せずに**実験を追跡できます。
+
+    ここでは `Keras` の学習を題材に、**自動ロギング (auto logging)** を使った記録とデプロイを行います。
+
+# 9. Reinforcement Learning for Robotics on Azure ML (Hands-on)
+
+ - [README.md](9.ReinforcementLearning/README.md)
+
+    仮想空間上のロボットの `Pick and Place` を題材にした、**強化学習 (Reinforcement Learning) のハンズオン**です。機械学習の経験はあるが強化学習は初めて、という方を対象にしています。
+
+    Azure Machine Learning には強化学習**専用**の機能はもうありません（`azureml-contrib-reinforcementlearning` は非推奨）。そのため、**汎用の `Command Job` / `Sweep Job` の上で OSS の強化学習ライブラリ（`Gymnasium` / `Stable-Baselines3` / `panda-gym`）を動かす**構成を取っています。
+
+    強化学習は「同じ設定でも結果が大きくばらつく」ため、**実験の記録と比較**が普通の機械学習以上に重要になります。このハンズオンでは、`MLflow` による実験追跡、`Sweep Job` で乱数シードを振った再現性評価、対話型ジョブによるデバッグ、そして**報酬ハッキング (Reward Hacking) の検出**までを扱います。
+
+    使用する OSS はすべて `MIT` / `zlib` ライセンス（商用利用可）です。根拠 URL は [A2_OSSライセンス一覧.md](9.ReinforcementLearning/docs/A2_OSSライセンス一覧.md) にまとめてあります。
+
 ## 参考
 
 Azure Machine Learning Services ドキュメント:
