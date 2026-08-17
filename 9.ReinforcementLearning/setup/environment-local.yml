@@ -1,0 +1,50 @@
+# ローカル PC（Windows / macOS / Linux）で本ハンズオンを動かすための conda 環境定義。
+#
+# 【Azure ML 側との違い】
+#   Azure ML のジョブ実行環境は ../src/conda.yaml です。こちらはローカル実行専用で、
+#   GUI シミュレーターの確認と Notebook の実行、Azure ML へのジョブ投入に必要なものを含みます。
+#   強化学習パッケージのバージョンは ../src/conda.yaml と一致させてください。
+#
+# 【なぜ pybullet だけ conda-forge から入れるのか】
+#   PyPI の pybullet 3.2.7 は manylinux 向けホイールとソース配布しか公開していないため、
+#   Windows と macOS では pip がソースビルドに入り、C++ コンパイラが必要になります。
+#   conda-forge のビルド済みパッケージを使うとコンパイラなしで導入できます。
+#   出典（参考情報・サードパーティ）: https://pypi.org/project/pybullet/#files
+#
+# 【numpy<2 は必須制約】
+#   panda-gym の setup.py が install_requires に "numpy<2" を指定しています。
+#   出典（参考情報・OSS 公式ソース）: https://github.com/qgallouedec/panda-gym/blob/master/setup.py
+
+name: rl-local
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pybullet
+  - "numpy<2"
+  - scipy
+
+  # Notebook を動かすため（ローカル実行専用）
+  - jupyterlab
+  - "ipykernel>=6.0"
+
+  - pip:
+      # --- 強化学習（../src/conda.yaml と同じバージョンに固定） ---
+      - "gymnasium==0.29.1"
+      - "panda-gym==3.0.7"
+      - "stable-baselines3==2.4.1"
+
+      # --- 評価動画の書き出し ---
+      - imageio
+      - imageio-ffmpeg
+
+      # --- Azure ML へのジョブ投入と MLflow への記録 ---
+      - azure-ai-ml
+      - azure-identity
+      - mlflow
+      - azureml-mlflow
+
+      # --- notebooks/03〜06 の集計・可視化 ---
+      - pandas
+      - matplotlib

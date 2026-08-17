@@ -149,7 +149,7 @@ az extension add --name ml
 >
 > 一方 **conda-forge は `win-64` 向けのビルド済み `pybullet` を配布しています**。
 > こちらを使えば **C++ コンパイラを入れずに** Windows へ導入できます。
-> **具体的な手順は [notebooks/01_setup_azureml.ipynb](../notebooks/01_setup_azureml.ipynb) の「1-2. （Windows のみ）ローカルで RL 環境を動かす場合の準備」にまとめてあります。**
+> **具体的な手順は [notebooks/01_setup_azureml.ipynb](../notebooks/01_setup_azureml.ipynb) の「1-3.【任意】ローカルで RL 環境を動かすための導入」にまとめてあります（**ターミナル不要。セルを実行するだけで完了します**）。**
 >
 > **対処の選択肢**
 >
@@ -201,12 +201,25 @@ az extension add --name ml
 SDK から Azure にアクセスするには**認証情報**が必要です。本テキストでは `DefaultAzureCredential` を使います。
 
 `DefaultAzureCredential` は、**複数の認証方法を上から順に自動で試す**仕組みです。
-（環境変数 → マネージド ID → Azure CLI のログイン情報 …）
+（環境変数 → マネージド ID → Visual Studio Code → Azure CLI のログイン情報 → Azure PowerShell …）
 
 > **出典: Microsoft Learn**
 > [DefaultAzureCredential クラス](https://learn.microsoft.com/python/api/azure-identity/azure.identity.defaultazurecredential)
 
+> [!IMPORTANT]
+> **Python の `DefaultAzureCredential` は、既定では対話型ブラウザー認証を含みません。**
+> 公式ドキュメントは「`InteractiveBrowserCredential` **is excluded by default** … set the `exclude_interactive_browser_credential` keyword parameter to **`False`**」と明記しています。
+> [notebooks/01_setup_azureml.ipynb](../notebooks/01_setup_azureml.ipynb) はこの引数を明示的に指定しているため、**ノートブックの中だけでサインインできます。**
+>
+> **出典: Microsoft Learn** — [Credential chains in the Azure Identity library for Python](https://learn.microsoft.com/azure/developer/python/sdk/authentication/credential-chains#defaultazurecredential-overview)
+
 ### 手順
+
+> [!NOTE]
+> **この節の `az login` は任意です。**
+> [notebooks/01_setup_azureml.ipynb](../notebooks/01_setup_azureml.ipynb) の「**3. Azure へのサインインとワークスペースへの接続**」がノートブックの中でサインインを行うため、**`az login` を実行しなくても先へ進めます。**
+
+Azure CLI も使いたい場合や、ブラウザーでの対話サインインを毎回避けたい場合は、次を実行しておいてください。
 
 ```powershell
 # Azure CLI でサインイン（ブラウザーが開きます）
@@ -221,7 +234,10 @@ az account show
 
 ### 期待される結果
 
-- `az account show` で、演習に使うサブスクリプションの情報が表示される
+| 進め方 | 期待される結果 |
+|---|---|
+| **ノートブックだけで進める（推奨）** | [notebooks/01](../notebooks/01_setup_azureml.ipynb) の 3. を実行すると、ブラウザー（または確認コード）でサインインでき、ワークスペース名が表示される |
+| `az login` も使う | `az account show` で、演習に使うサブスクリプションの情報が表示される |
 
 ---
 
@@ -291,7 +307,7 @@ az account show
 - [ ] 使用するリージョンを決めた
 - [ ] **そのリージョンの vCPU クォータに 8 以上の空きがある**ことを確認した
 - [ ] （不足していた場合）クォータ増加を申請した
-- [ ] `az login` に成功し、`az account show` で正しいサブスクリプションが表示された
+- [ ] Azure へサインインできた（[notebooks/01](../notebooks/01_setup_azureml.ipynb) の 3.、または `az login` → `az account show`）
 - [ ] リソース命名規則とタグ（`project` / `owner` / `delete-after`）を決めた
 - [ ] **実行場所の二段構え**（段階1 = 手元の PC ／ 段階2 = Azure ML Compute）を理解した
 - [ ] 方式 B（手元の PC）を選んだ場合、**MLflow の追跡 URI 設定が別途必要**であることを把握した（[03 章](03_AzureML環境構築.md) 3.6）

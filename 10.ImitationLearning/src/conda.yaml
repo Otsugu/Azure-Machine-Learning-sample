@@ -1,0 +1,53 @@
+# Azure Machine Learning のジョブ実行環境定義
+#
+# 【重要】このファイルは Azure ML の「カスタム環境（Environment）」を作るための conda 定義です。
+#   ベース Docker イメージの上に、conda がこの定義どおりの Python 環境を新規作成します。
+#   ベースイメージに入っている Python パッケージは、この conda 環境からは見えません。
+#   出典: https://learn.microsoft.com/azure/machine-learning/how-to-manage-environments-v2?view=azureml-api-2
+#
+# 【バージョンの決め方】
+#   ここに書かれたバージョンは、すべて 2026-08-17 に Windows 11 / Python 3.10.20 上で
+#   実際に `pip install` して解決された結果です。推測値は含まれていません。
+#
+# 【imitation がピン留めしている依存】
+#   imitation 1.0.1 の requires_dist は、次を自分で固定しています。
+#     stable-baselines3~=2.2.1 / gymnasium[classic-control]~=0.29 / seals~=0.2.1
+#   出典: https://pypi.org/pypi/imitation/json
+#   本ファイルはそれらを「実際に解決された値」として明示し、再現性を確保しています。
+#
+# 【numpy を明示固定する理由】
+#   imitation (numpy>=1.15) / stable-baselines3 2.2.1 (numpy>=1.20) / gymnasium 0.29.1
+#   (numpy>=1.21.0) のいずれも上限を宣言していません。
+#   実測では numpy 2.2.6 が導入され、seals/CartPole-v0 の生成・学習・評価まで動作しました。
+#   将来の numpy で壊れないよう、動作確認できた版に固定します。
+#
+# 【PyTorch を固定しない理由】
+#   stable-baselines3 が要求する版に pip で解決させます。
+#   実際に解決されたバージョンは、学習スクリプトが pip freeze して MLflow に記録します。
+
+# 【検証した環境】
+#   Windows 11 / Python 3.10.20 (conda-forge) でのみ検証済みです。
+#   Azure ML のコンピューティングは Linux ですが、本ファイルでの Linux 実行は
+#   チュートリアルの実行検証工程で確認します。
+
+name: il-seals-cartpole
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      # --- 模倣学習 (すべて MIT ライセンス。詳細は NOTICE.md) ---
+      - imitation==1.0.1               # BC / DAgger / GAIL / AIRL などの実装
+      - stable-baselines3==2.2.1       # imitation が使う RL バックエンド
+      - gymnasium[classic-control]==0.29.1  # 環境 API 規約。extra を落とすと pygame が入らない
+      - seals==0.2.1                   # 固定ホライズン版の環境（seals/CartPole-v0）
+      - numpy==2.2.6                   # 上限宣言が無いため動作確認済みの版に固定
+
+      # --- 実験追跡 (Azure ML への記録に必須) ---
+      - mlflow==3.15.1
+      - azureml-mlflow==1.60.0
+
+      # --- 集計・可視化 ---
+      - pandas==2.3.3
+      - matplotlib==3.10.9

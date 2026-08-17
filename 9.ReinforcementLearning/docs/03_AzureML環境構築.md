@@ -299,8 +299,16 @@ with mlflow.start_run():                      # ローカルでは start_run が
 > 公式ドキュメントは「この場合、追跡 URI を取得するには、Azure Machine Learning SDK for Python または Azure Machine Learning CLI v2 を使用する必要があります」と警告しています。
 > **URI の文字列を手で組み立てないでください。必ず SDK か CLI から取得します。**（出典: 同上）
 
-> ⚠ **ローカル実行の前に `az login` を済ませてください。**
-> `DefaultAzureCredential` は最終手段として**対話型ブラウザー認証**を試みます。公式ドキュメントは「**「対話型ブラウザー」認証は資格情報の入力を求める際にコード実行をブロックします。このアプローチはトレーニング ジョブなどの無人環境での認証には適しません**」と警告しています。（出典: 同上、および [02 章](02_Azure環境の準備.md) 2.5）
+> ⚠ **ローカル実行では、サインインのために処理が止まることがあります。**
+> **`azureml-mlflow` プラグインは、既定でブラウザーを開いて対話認証を行います。**
+> 公式ドキュメントは「**「対話型ブラウザー」認証は資格情報の入力を求める際にコード実行をブロックします。このアプローチはトレーニング ジョブなどの無人環境での認証には適しません**」と警告しています。（出典: 同上）
+
+> ⚠ **よくある誤解**: Python の **`DefaultAzureCredential` は、既定では対話型ブラウザー認証を含みません。**
+> 公式ドキュメントは「`InteractiveBrowserCredential` **is excluded by default** … set the `exclude_interactive_browser_credential` keyword parameter to **`False`**」と明記しています。
+> [notebooks/01_setup_azureml.ipynb](../notebooks/01_setup_azureml.ipynb) の **「3. Azure へのサインインとワークスペースへの接続」** では、この引数を明示的に指定することで **ターミナルでの `az login` を不要にしています。**
+> **`az login` は任意です。** 済ませておけば、その資格情報がチェーンの中で使われ、ブラウザーは開きません。
+>
+> **出典: Microsoft Learn** — [Credential chains in the Azure Identity library for Python](https://learn.microsoft.com/azure/developer/python/sdk/authentication/credential-chains#defaultazurecredential-overview)
 
 > **重要**: **ローカル run は「下見」です。**
 > コードのスナップショットと環境バージョンがワークスペースに残らないため、**比較・報告に使う実験は必ずジョブとして実行してください。**
@@ -423,7 +431,7 @@ ml_client.jobs.show_services("<ジョブ名>", node_index=0)
 |---|---|---|---|---|
 | 1 | ワークスペース作成が `AuthorizationFailed` で失敗 | 権限不足 | Portal ［アクセス制御 (IAM)］ | [02 章](02_Azure環境の準備.md) の 2.1 に戻る |
 | 2 | ワークスペース名が「既に使われています」 | 名前がリソース グループ内で重複 | 既存リソースを確認 | 名前に自分のエイリアスを付ける |
-| 3 | `DefaultAzureCredential` が失敗する | サインインしていない／テナント違い | `az account show` | `az login`（必要なら `--tenant`）。コンピューティング インスタンス上なら通常は自動で認証されます |
+| 3 | `DefaultAzureCredential` が失敗する | サインインしていない／テナント違い | Notebook の `AUTH_MODE` の値。CLI を使っているなら `az account show` | **Notebook の `AUTH_MODE` を `"browser"` か `"device"` に変えて実行し直す**（[notebooks/01](../notebooks/01_setup_azureml.ipynb) の 3.）。`az login`（必要なら `--tenant`）でも構いません。コンピューティング インスタンス上なら通常は自動で認証されます |
 | 4 | `MLClient` の作成で `ResourceNotFound` | サブスクリプション ID / RG 名 / WS 名 の誤り | studio 右上のワークスペース名をクリックすると3点セットが表示される | 値をコピーし直す |
 | 5 | クラスターが**いつまでも 0 ノード** | **ジョブが無いだけ**（正常）／クォータ不足 | studio ［コンピューティング］→ 該当クラスター → ［ノード］ | ジョブ投入後も 0 のままならクォータを確認（[02 章](02_Azure環境の準備.md) 2.3） |
 | 6 | **環境（イメージ）のビルドが失敗する** | conda / pip の依存解決に失敗 | studio ［環境］→ 該当バージョン →［ビルド ログ］ | ログの `ResolvePackageNotFound` / `ERROR: Cannot install ...` を確認。**まず `numpy<2` が効いているか**を疑う |
@@ -442,7 +450,7 @@ ml_client.jobs.show_services("<ジョブ名>", node_index=0)
 | 19 | `env.render()` が `None` を返す（`render_ok` が 0） | `render_mode` を指定していない | スクリプトの `gym.make` 呼び出し | **`render_mode="rgb_array"` を必ず指定する**。`"human"` は GUI が必要なので**ヘッドレスでは使えません** |
 | 20 | ジョブが終わらない。ノードが占有されたまま | **`sleep infinity` を使った** | studio のジョブ一覧で Running のものを探す | `ml_client.jobs.begin_cancel("<ジョブ名>")` で即キャンセル（3.8 の警告参照） |
 | 21 | **手元の PC で学習したのに studio に何も表示されない** | **追跡 URI を設定していない**（手元の `mlruns/` に保存された） | カレント ディレクトリに **`mlruns/` フォルダー**ができていないか | `mlflow.set_tracking_uri(...)` を実行してから再度実行する（3.6 参照） |
-| 22 | ローカル実行で**ブラウザーが勝手に開く／処理が止まる** | **`DefaultAzureCredential` が対話型ブラウザー認証にフォールバックした** | `az account show` でサインイン状態を確認 | 先に `az login` を済ませる（[02 章](02_Azure環境の準備.md) 2.5） |
+| 22 | ローカル実行で**ブラウザーが開く／処理が止まる** | **仕様です。** ① Notebook が `exclude_interactive_browser_credential=False` で対話サインインを有効にしている ② **`azureml-mlflow` プラグインは既定で対話認証を行う** | サインイン画面が別ウィンドウで開いていないか（背面に隠れていることがあります） | **サインインを完了させる。** ブラウザーが使えない環境なら `AUTH_MODE = "device"` にする。無人実行ならサービス プリンシパルの環境変数を設定する（[notebooks/01](../notebooks/01_setup_azureml.ipynb) の 7. 末尾） |
 | 23 | ローカル実行の run に**コードや環境の情報が残っていない** | **仕様です。** スナップショットと環境バージョンはジョブ実行時にのみ保存される | — | **比較・報告に使う実験は必ず Job として実行する**（3.6 参照） |
 | 24 | **ジョブ投入時に `Workspace <name> MSI doesn't have appropriate permissions on the storage account <sa>`** | ①ワークスペースのマネージド ID へのロール付与が未伝播<br>②**ストレージがネットワーク規則で遮断されている**（実測で確認した原因） | `az storage container list --account-name <sa> --auth-mode login`<br>→ `blocked by network rules` なら ② | ① `Storage Blob Data Contributor` を MSI に付与して数分待つ<br>② 下の枠を参照 |
 

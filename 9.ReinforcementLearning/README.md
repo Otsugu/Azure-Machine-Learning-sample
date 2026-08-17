@@ -140,9 +140,12 @@ mlflow.set_tracking_uri(mlflow_tracking_uri)
 > **文字列を手で組み立てず、必ず SDK か CLI から取得してください。**（出典: 同上）
 
 > ⚠ **認証の注意（ローカル実行でハマる筆頭）**
-> `DefaultAzureCredential` は「環境変数 → マネージド ID → **Azure CLI** → Azure PowerShell → **対話型ブラウザー**」の順に試します。
-> 公式ドキュメントは「**"対話型ブラウザー" 認証は資格情報の入力を求める際にコード実行をブロックします。このアプローチはトレーニング ジョブなどの無人環境での認証には適しません**」と警告しています。
-> → **ローカルでは事前に `az login` を済ませておく**のが最も確実です。（出典: 同上）
+> **`azureml-mlflow` プラグイン**は「環境変数 → マネージド ID → **Azure CLI** → Azure PowerShell → **対話型ブラウザー**」の順に認証を試します。
+> 公式ドキュメントは「**"対話型ブラウザー" 認証は資格情報の入力を求める際にコード実行をブロックします。このアプローチはトレーニング ジョブなどの無人環境での認証には適しません**」と警告しています。（出典: 同上）
+
+> ⚠ **よくある誤解**: Python の **`DefaultAzureCredential` は、既定では対話型ブラウザーを含みません**（`exclude_interactive_browser_credential=False` で有効化できます）。
+> [notebooks/01_setup_azureml.ipynb](notebooks/01_setup_azureml.ipynb) はこれを指定しているため、**`az login` なしでもサインインできます。**
+> → 出典: [Credential chains in the Azure Identity library for Python](https://learn.microsoft.com/azure/developer/python/sdk/authentication/credential-chains#defaultazurecredential-overview)
 
 ### ⚠ ローカル実行の限界
 
@@ -218,6 +221,11 @@ panda-gym のソース `panda_gym/pybullet.py` では、`render_mode="human"` �
 ```
 9.ReinforcementLearning/
 ├── README.md                       ← いまここ
+├── setup/                            【最初に実行する】ローカル PC の環境構築（→ 7.1）
+│   ├── setup.ps1                     … Windows 用（PowerShell 7 以降）
+│   ├── setup.sh                      … macOS / Linux 用
+│   ├── environment-local.yml         … ローカル用 conda 環境の定義
+│   └── verify_env.py                 … 導入結果の自動検証
 ├── docs/                            【読む】概念・判断基準・画面手順・トラブルシューティング
 │   ├── 00_はじめに.md
 │   ├── 01_強化学習の基礎.md
@@ -271,6 +279,110 @@ panda-gym のソース `panda_gym/pybullet.py` では、`render_mode="human"` �
 
 > **GPU は不要です。その分、計算コストを大きく押さえられます。**
 > 本ハンズオンの題材（panda-gym + PyBullet）は**物理シミュレーションが CPU 律速**で、GPU を追加しても学習全体の速度は大きくは上がりません。したがって **CPU クラスターで実施します**。
+
+### 7.1 ローカル環境を構築する
+
+**方法は 2 つあります。どちらでも結果は同じです。**
+
+| # | 方法 | 向いている場面 |
+|---|---|---|
+| **① Notebook だけで完結（推奨）** | [notebooks/01_setup_azureml.ipynb](notebooks/01_setup_azureml.ipynb) の **「1. セットアップ」** のセルを順に実行する | **ターミナルを開きたくない。** Azure へのサインインもノートブックの中で行う |
+| ② セットアップ スクリプト | [setup/](setup/) の `setup.ps1` / `setup.sh` を実行する | **conda が未導入の PC。** 複数台へ一括展開したい |
+
+> [!IMPORTANT]
+> **① は、既に conda 環境がある（＝ Notebook を conda 環境のカーネルで開ける）ことが前提です。**
+> **conda がまったく入っていない PC では ② から始めてください。** ② が conda（Miniforge）の導入から行います。
+> ①と②は同じ検証スクリプト [setup/verify_env.py](setup/verify_env.py) を使うため、**結果は一致します。**
+
+#### ② のスクリプトが必要な理由
+
+本テキストは、同じ学習スクリプトを**手元の PC（段階 1）** と **Azure ML Compute（段階 2）** の 2 か所で実行できることを設計要件にしています（→ 上の 4）。
+このうち **段階 1（手元の PC）に必要なものを一括で導入する**のが [setup/](setup/) のスクリプトです。
+**OS しか入っていない PC でも、ローカル実行に必要なものが一括で揃います。**
+
+> **方式 A（Azure ML のコンピューティング インスタンス）を使う場合、この節は不要です。**
+> Python も SDK も導入済みだからです。方式の違いは [docs/02_Azure環境の準備.md](docs/02_Azure環境の準備.md) の 2.4 を参照してください。
+
+#### ② で導入されるもの
+
+| # | 導入されるもの | 用途 |
+|---|---|---|
+| 1 | **Miniforge（conda）** ※未導入の場合のみ | Python と `pybullet` をビルド済みパッケージで導入するため |
+| 2 | **conda 環境 `rl-local`**（Python 3.10） | 本ハンズオン専用の環境。既存の Python 環境を汚しません |
+| 3 | Gymnasium / panda-gym / Stable-Baselines3 / PyBullet | RL 環境と学習アルゴリズム（バージョンは [src/conda.yaml](src/conda.yaml) と一致） |
+| 4 | Azure ML SDK v2 / MLflow | ジョブ投入と実験の記録 |
+| 5 | JupyterLab と Jupyter カーネル「Python (rl-local)」 | Notebook の実行 |
+| 6 | **Azure CLI**（及び `ml` 拡張） ※未導入の場合のみ | **任意です。** `az login` を使いたい場合に利用します。**Notebook は Azure CLI が無くてもサインインできます**（→ [docs/02](docs/02_Azure環境の準備.md) の 2.5） |
+
+> **なぜ pip だけでなく conda を使うのか**
+> `panda-gym` が依存する **`pybullet` は、PyPI に Windows 向けと macOS 向けのビルド済みホイールを公開していません**（最新版 3.2.7 の配布物は manylinux 向けホイールとソース配布のみ）。
+> そのため `pip install panda-gym` はソースビルドに入り、C++ コンパイラーを要求します。
+> **`pybullet` だけを conda-forge のビルド済みパッケージから導入することで、3 つの OS すべてでコンパイラーなしに導入できます。**
+> → 出典（**参考情報（サードパーティ）**）: https://pypi.org/project/pybullet/#files ／ https://anaconda.org/conda-forge/pybullet
+
+#### ② の手順
+
+**Windows（PowerShell 7 以降）**
+
+```powershell
+# PowerShell 7 が未導入の場合は先に入れる
+winget install --exact --id Microsoft.PowerShell
+
+cd 9.ReinforcementLearning\setup
+pwsh -NoProfile -File .\setup.ps1
+```
+
+**macOS / Linux**
+
+```bash
+cd 9.ReinforcementLearning/setup
+bash setup.sh
+```
+
+> **何度実行しても安全です。** 既に導入済みのものはスキップされ、conda 環境は定義ファイルの内容に合わせて更新されます。
+> 途中で失敗した場合も、原因を取り除いてから同じコマンドを再実行してください。
+
+#### 期待される結果
+
+最後に次の 2 つのメッセージが表示されれば成功です。
+
+```
+OK: ローカル環境の検証に成功しました。
+=== セットアップが完了しました ===
+```
+
+このとき、次の 3 つが終わっています。
+
+1. conda 環境 `rl-local` の作成
+2. Jupyter カーネル「Python (rl-local)」の登録
+3. **`PandaReach-v3` が実際に 1 ステップ動作することの確認**（ヘッドレス描画での検証）
+
+#### 次にすること
+
+1. [notebooks/01_setup_azureml.ipynb](notebooks/01_setup_azureml.ipynb) を開き、**カーネル「Python (rl-local)」** を選ぶ
+   （JupyterLab を使う場合は `conda activate rl-local` → `jupyter lab`）
+2. そのまま **「1. セットアップ」から順にセルを実行する**
+
+> **`az login` は不要です。** ノートブックの「3. Azure へのサインインとワークスペースへの接続」がサインインまで行います（→ [docs/02_Azure環境の準備.md](docs/02_Azure環境の準備.md) の 2.5）。
+> もちろん `az login` を済ませてあれば、その資格情報が使われます。
+
+> **このスクリプトは Azure のリソースを一切作成しません。**
+> ワークスペース・コンピューティング・環境の作成は [docs/03_AzureML環境構築.md](docs/03_AzureML環境構築.md) と [notebooks/01_setup_azureml.ipynb](notebooks/01_setup_azureml.ipynb) で行います。
+
+#### ⚠ うまくいかないときは
+
+| # | 症状 | 原因 | 対処 |
+|---|---|---|---|
+| 1 | `このスクリプトは PowerShell 7 以降が必要です` | Windows PowerShell 5.1 で実行した | `winget install --exact --id Microsoft.PowerShell` の後、**`pwsh`** から実行する |
+| 2 | `既定のインストール先 … に空白または非 ASCII 文字が含まれています` | ユーザー プロファイルのパスに空白や日本語が含まれる（Miniforge の制約） | `C:\miniforge3` など短い英数字のパスへ [Miniforge](https://github.com/conda-forge/miniforge) を手動導入してから再実行 |
+| 3 | macOS / Linux で構文エラーになる | `sh setup.sh` で実行した | **`bash setup.sh`** で実行する |
+| 4 | conda 環境の作成が途中で失敗する | ネットワークや企業プロキシ | プロキシ環境での対処は [docs/02_Azure環境の準備.md](docs/02_Azure環境の準備.md) のトラブルシューティングを参照。復旧後に再実行 |
+| 5 | `NG: 次のパッケージが見つかりません` | 環境の作成が途中で失敗している | スクリプトを再実行する |
+| 6 | `NG: numpy 2.x が導入されています` | 後から入れたパッケージが numpy を上げた | スクリプトを再実行する（`numpy<2` は panda-gym の必須制約です） |
+| 7 | Azure CLI の導入だけが失敗した | 権限やパッケージ マネージャーの問題 | **ローカル環境はそのまま使えます。** [Azure CLI の導入](https://learn.microsoft.com/cli/azure/install-azure-cli) を参照して手動で導入 |
+
+> **GUI（3D シミュレーター）の確認はこのスクリプトでは行いません。**
+> 検証はヘッドレス（`renderer="Tiny"`）で行います。GUI を開く手順は [notebooks/01_setup_azureml.ipynb](notebooks/01_setup_azureml.ipynb) の **1-6** と [docs/04_RL環境を触って理解する.md](docs/04_RL環境を触って理解する.md) の 4.6 にあります。
 
 ---
 
