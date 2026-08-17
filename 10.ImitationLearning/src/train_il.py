@@ -1,7 +1,7 @@
 """専門家デモから方策を学習する（BC / DAgger / GAIL）。
 
 Sweep Job の主要メトリックは normalized_return です。
-  normalized_return = (方策のリターン - 一様ランダムのリターン) / (専門家のリターン - 一様ランダムのリターン)
+  normalized_return = (方策のリターン - ランダムのリターン) / (専門家のリターン - ランダムのリターン)
 基準値は collect_demos.py が出力した scores.json から読み込みます。
 """
 
@@ -16,13 +16,14 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.ppo import MlpPolicy
 
-from il_common import evaluate, log_pip_freeze, make_env
+from il_common import evaluate, log_pip_freeze, make_env, set_seed
 from imitation.algorithms import bc
 from imitation.algorithms.adversarial.gail import GAIL
 from imitation.algorithms.dagger import SimpleDAggerTrainer
 from imitation.data import rollout, serialize
 from imitation.rewards.reward_nets import BasicRewardNet
 from imitation.util.networks import RunningNorm
+from scripted_expert import ScriptedExpertPolicy
 
 N_ENVS = 8
 N_EVAL_EPISODES = 20
@@ -32,21 +33,23 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--algo", choices=("bc", "dagger", "gail"), required=True)
     parser.add_argument("--demos-dir", required=True)
-    parser.add_argument("--n-demo-episodes", type=int, default=50)
+    parser.add_argument("--n-demo-episodes", type=int, default=200)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--output-dir", required=True)
     # BC / DAgger 用
-    parser.add_argument("--epochs", type=int, default=1)
+    parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--batch-size", type=int, default=32)
     # DAgger 用
-    parser.add_argument("--dagger-timesteps", type=int, default=8_000)
+    parser.add_argument("--dagger-timesteps", type=int, default=20_000)
     # GAIL 用
-    parser.add_argument("--gail-timesteps", type=int, default=200_000)
+    parser.add_argument("--gail-timesteps", type=int, default=100_000)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    #  PyTorch のグローバル乱数まで固定しないと、同じ --seed でも結果が再現しない
+    set_seed(args.seed)
     # demos-dir と output-dir は実行ごとに変わるパスなので、比較用パラメーターに含めない
     mlflow.log_params(
         {k: v for k, v in vars(args).items() if k not in ("demos_dir", "output_dir")}
@@ -107,15 +110,17 @@ def main() -> None:
                 # 最終値 eval_return_mean とは別名にして、系列が混ざらないようにする。
                 nonlocal epoch
                 epoch += 1
-                mean, _ = evaluate(bc_trainer.policy, venv, N_EVAL_EPISODES)
+                mean, _, success = evaluate(bc_trainer.policy, venv, N_EVAL_EPISODES)
                 mlflow.log_metric("epoch_eval_return_mean", mean, step=epoch)
+                mlflow.log_metric("epoch_eval_success_rate", success, step=epoch)
 
             bc_trainer.train(
                 n_epochs=args.epochs, on_epoch_end=on_epoch_end, progress_bar=False
             )
             policy = bc_trainer.policy
         else:
-            expert = PPO.load(str(demos_dir / "expert_policy.zip"), env=venv)
+            #  DAgger は学習中に専門家へ問い合わせる。専門家は scripted_expert.py の手続き。
+            expert = ScriptedExpertPolicy(venv.observation_space, venv.action_space)
             with tempfile.TemporaryDirectory() as scratch:
                 dagger = SimpleDAggerTrainer(
                     venv=venv,
@@ -127,9 +132,12 @@ def main() -> None:
                 dagger.train(args.dagger_timesteps)
             policy = bc_trainer.policy
 
-    eval_mean, eval_std = evaluate(policy, venv, N_EVAL_EPISODES)
+    eval_mean, eval_std, eval_success = evaluate(policy, venv, N_EVAL_EPISODES)
     normalized = (eval_mean - random_mean) / (expert_mean - random_mean)
-    print(f"eval mean={eval_mean:8.2f} std={eval_std:7.2f} normalized={normalized:6.3f}")
+    print(
+        f"eval return={eval_mean:8.2f} +/- {eval_std:6.2f} "
+        f"success={eval_success:.2f} normalized={normalized:6.3f}"
+    )
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -139,9 +147,11 @@ def main() -> None:
         {
             "eval_return_mean": eval_mean,
             "eval_return_std": eval_std,
+            "eval_success_rate": eval_success,
             "normalized_return": normalized,
             "random_mean": random_mean,
             "expert_mean": expert_mean,
+            "expert_success_rate": scores["expert_success_rate"],
         }
     )
     log_pip_freeze()

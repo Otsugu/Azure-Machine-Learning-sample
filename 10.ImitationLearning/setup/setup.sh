@@ -11,12 +11,12 @@
 #      うまくいかない場合は docs/A1_トラブルシューティング.md を参照し、
 #      environment-local.yml を使って手動で環境を作成してください。
 #          conda env create --file environment-local.yml
-#          conda run -n il-local python verify_env.py
+#          conda run -n il-panda python verify_env.py
 #
 #  このスクリプトが行うこと:
 #      1. Miniforge (conda) の導入          … 未導入の場合のみ
-#      2. conda 環境 il-local の作成 / 更新
-#      3. Jupyter カーネル「Python (il-local)」の登録
+#      2. conda 環境 il-panda の作成 / 更新
+#      3. Jupyter カーネル「Python (il-panda)」の登録
 #      4. Azure CLI と ml 拡張の導入        … 未導入の場合のみ
 #      5. verify_env.py による動作確認
 #
@@ -30,7 +30,7 @@ set -euo pipefail
 SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SETUP_DIR/environment-local.yml"
 VERIFY_SCRIPT="$SETUP_DIR/verify_env.py"
-ENV_NAME="il-local"
+ENV_NAME="il-panda"
 MINIFORGE_DIR="$HOME/miniforge3"
 MINIFORGE_URL="https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
 

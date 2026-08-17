@@ -1,5 +1,5 @@
 # ローカル実行で MLflow が生成するもの
-# MLflow 3.x は追跡 URI 未設定のときカレント ディレクトリに記録します（docs/A1 の 2-5）
+# MLflow 3.x は追跡 URI 未設定のときカレント ディレクトリに記録します（docs/A1 の 3-4）
 mlruns/
 mlflow.db
 
@@ -9,3 +9,7 @@ __pycache__/
 
 # 学習の出力（デモ・方策）は Azure ML の成果物として扱うため、リポジトリには置かない
 outputs/
+
+# ノートブックが手元に書き出す集計結果（docs/09 の 9.5）
+notebooks/bc_results.csv
+notebooks/all_runs_comparison.csv

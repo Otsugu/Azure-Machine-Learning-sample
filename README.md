@@ -99,6 +99,18 @@ https://docs.microsoft.com/ja-jp/azure/machine-learning/service/samples-notebook
 
     使用する OSS はすべて `MIT` / `zlib` ライセンス（商用利用可）です。根拠 URL は [A2_OSSライセンス一覧.md](9.ReinforcementLearning/docs/A2_OSSライセンス一覧.md) にまとめてあります。
 
+# 10. Imitation Learning on Azure ML (Hands-on)
+
+ - [README.md](10.ImitationLearning/README.md)
+
+    「上手なやり方を見せて真似させる」**模倣学習 (Imitation Learning) のハンズオン**です。9 章と違い、**機械学習・強化学習の知識を前提にしません**（初級者のソフトウェア エンジニア向け）。
+
+    強化学習が**報酬関数を設計する**のに対し、模倣学習は**その設計を回避して専門家のお手本から学びます**。題材は 9 章と同じ **Franka Emika Panda ロボットのピックアンドプレース**（`panda-gym` の `PandaPickAndPlace-v3`）で、**`Command Job` / `Sweep Job` の上で OSS の `imitation` / `Stable-Baselines3` / `Gymnasium` / `panda-gym` を動かす**構成です。GPU は不要です。
+
+    このハンズオンの主題は「手法を成功させること」ではなく、**実験の落とし穴に気づくこと**です。**比較実験の交絡**、**単一シードでの比較**、**乱数シードを固定したつもりで固定できていない問題**、**可変ホライズン環境で評価が壊れる問題**を、いずれも実測にもとづいて扱います。
+
+    ⚠ **ローカル実行のみ検証済みで、Azure ML 上でのジョブ実行は未検証**です。そのため所要時間・費用は記載していません。ライセンスの確認結果は [A2_OSSライセンス一覧.md](10.ImitationLearning/docs/A2_OSSライセンス一覧.md) にまとめてあります。
+
 ## 参考
 
 Azure Machine Learning Services ドキュメント:

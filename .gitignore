@@ -77,6 +77,11 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# MLflow (ローカル実行時にカレント フォルダーへ生成される)
+mlruns/
+mlflow.db
+mlflow.db-journal
+
 # IPython
 profile_default/
 ipython_config.py

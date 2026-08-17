@@ -6,8 +6,8 @@
 #
 #  このスクリプトが行うこと:
 #      1. Miniforge (conda) の導入          … 未導入の場合のみ
-#      2. conda 環境 il-local の作成 / 更新
-#      3. Jupyter カーネル「Python (il-local)」の登録
+#      2. conda 環境 il-panda の作成 / 更新
+#      3. Jupyter カーネル「Python (il-panda)」の登録
 #      4. Azure CLI と ml 拡張の導入        … 未導入の場合のみ
 #      5. verify_env.py による動作確認
 #
@@ -22,7 +22,7 @@ $ErrorActionPreference = 'Stop'
 $SetupDir     = $PSScriptRoot
 $EnvFile      = Join-Path $SetupDir 'environment-local.yml'
 $VerifyScript = Join-Path $SetupDir 'verify_env.py'
-$EnvName      = 'il-local'
+$EnvName      = 'il-panda'
 $MiniforgeDir = Join-Path $env:USERPROFILE 'miniforge3'
 $MiniforgeUrl = 'https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe'
 
